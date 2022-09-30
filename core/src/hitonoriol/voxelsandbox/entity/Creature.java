@@ -11,12 +11,21 @@ public class Creature extends Scene {
 
 	private float speed = 5;
 	private Vector3 moveTranslation = new Vector3();
+	private Vector3 direction = new Vector3();
 	private Vector3 position = new Vector3();
 
 	public Creature(SceneAsset modelAsset) {
 		super(modelAsset.scene);
 	}
 
+	protected void setDirection(Vector3 direction) {
+		this.direction = direction;
+	}
+	
+	public Vector3 getDirection() {
+		return direction;
+	}
+	
 	public Vector3 getPosition() {
 		return modelInstance.transform.getTranslation(position);
 	}
@@ -37,6 +46,10 @@ public class Creature extends Scene {
 	public void move(Consumer<Vector3> moveTranslationSetter) {
 		moveTranslationSetter.accept(moveTranslation);
 		applyMovement();
+	}
+	
+	public void setMovementSpeed(float speed) {
+		this.speed = speed;
 	}
 	
 	public float getMovementSpeed() {

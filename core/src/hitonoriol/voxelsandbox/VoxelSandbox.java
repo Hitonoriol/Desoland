@@ -6,20 +6,18 @@ import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Cubemap;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
-import com.badlogic.gdx.graphics.g3d.utils.FirstPersonCameraController;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.shapebuilders.BoxShapeBuilder;
 import com.badlogic.gdx.math.Vector3;
 
-import hitonoriol.voxelsandbox.assets.Models;
-import hitonoriol.voxelsandbox.entity.Creature;
+import hitonoriol.voxelsandbox.entity.Player;
+import hitonoriol.voxelsandbox.io.Out;
 import hitonoriol.voxelsandbox.random.Random;
 import net.mgsx.gltf.scene3d.attributes.PBRColorAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRCubemapAttribute;
@@ -33,23 +31,22 @@ import net.mgsx.gltf.scene3d.utils.IBLBuilder;
 public class VoxelSandbox extends ApplicationAdapter {
 
 	private SceneManager sceneManager;
-	private PerspectiveCamera camera;
-	private FirstPersonCameraController cameraController;
 	private Cubemap diffuseCubemap;
 	private Cubemap environmentCubemap;
 	private Cubemap specularCubemap;
 	private SceneSkybox skybox;
 	private DirectionalLightEx light;
 
-	private Creature player;
+	private Vector3 tmpVec = new Vector3();
+
+	private Player player;
 
 	@Override
 	public void create() {
 		sceneManager = new SceneManager(1000);
-		player = new Creature(Models.player);
+		player = new Player();
 		sceneManager.addScene(player);
-		initCamera();
-		initCameraController();
+		sceneManager.setCamera(player.getCamera());
 
 		light = new DirectionalLightEx();
 		light.direction.set(1, -3, 1).nor();
@@ -72,24 +69,6 @@ public class VoxelSandbox extends ApplicationAdapter {
 		skybox = new SceneSkybox(environmentCubemap);
 		sceneManager.setSkyBox(skybox);
 		setUpScene();
-	}
-
-	private void initCamera() {
-		camera = new PerspectiveCamera(60f, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		camera.near = 0.01f;
-		camera.far = 1000;
-		camera.position.set(15, 25, -15);
-		camera.lookAt(player.getPosition());
-		sceneManager.setCamera(camera);
-	}
-
-	private void initCameraController() {
-		cameraController = new FirstPersonCameraController(camera);
-		Gdx.input.setInputProcessor(cameraController);
-		cameraController.forwardKey = 0;
-		cameraController.backwardKey = 0;
-		cameraController.strafeLeftKey = 0;
-		cameraController.strafeRightKey = 0;
 	}
 
 	private void setUpScene() {
@@ -120,8 +99,8 @@ public class VoxelSandbox extends ApplicationAdapter {
 	@Override
 	public void render() {
 		float delta = Gdx.graphics.getDeltaTime();
-		cameraController.update();
 		processMovement(delta);
+		pollKeybinds();
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 		sceneManager.update(delta);
 		sceneManager.render();
@@ -131,16 +110,27 @@ public class VoxelSandbox extends ApplicationAdapter {
 		float moveBy = player.getMovementSpeed() * delta;
 		Vector3 moveTranslation = player.getMoveTranslation();
 
-		if (Gdx.input.isKeyPressed(Keys.W))
-			moveTranslation.z -= moveBy;
-		if (Gdx.input.isKeyPressed(Keys.S))
+		if (Gdx.input.isKeyPressed(Keys.W)) {
+			tmpVec.set(player.getDirection());
+			moveTranslation.set(tmpVec.x, 0, tmpVec.z);
+		} else if (Gdx.input.isKeyPressed(Keys.S))
 			moveTranslation.z += moveBy;
+
 		if (Gdx.input.isKeyPressed(Keys.A))
 			moveTranslation.x -= moveBy;
-		if (Gdx.input.isKeyPressed(Keys.D))
+		else if (Gdx.input.isKeyPressed(Keys.D))
 			moveTranslation.x += moveBy;
 
+		if (moveTranslation.isZero())
+			return;
+
+		moveTranslation.nor().scl(moveBy);
 		player.applyMovement();
+	}
+
+	private void pollKeybinds() {
+		if (Gdx.input.isKeyJustPressed(Keys.ESCAPE))
+			Gdx.input.setCursorCatched(!Gdx.input.isCursorCatched());
 	}
 
 	@Override
