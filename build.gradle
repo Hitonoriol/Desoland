@@ -11,6 +11,7 @@ allprojects {
 		ashleyVersion = '1.7.4'
 		aiVersion = '1.8.2'
 		gdxControllersVersion = '2.2.1'
+		visuiVersion = '1.5.0'
 		gltfVersion = '-SNAPSHOT'
 	}
 
@@ -34,7 +35,6 @@ project(":desktop") {
 		api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
 		api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
 		api "com.badlogicgames.gdx:gdx-bullet-platform:$gdxVersion:natives-desktop"
-		
 	}
 }
 
@@ -47,6 +47,7 @@ project(":core") {
 		api "com.badlogicgames.gdx:gdx-bullet:$gdxVersion"
 		api "com.badlogicgames.gdx:gdx-ai:$aiVersion"
 		api "com.github.mgsx-dev.gdx-gltf:gltf:$gltfVersion"
+		api "com.kotcrab.vis:vis-ui:$visuiVersion"
 		
 		implementation 'org.apache.commons:commons-math3:3.6.1'
 	}

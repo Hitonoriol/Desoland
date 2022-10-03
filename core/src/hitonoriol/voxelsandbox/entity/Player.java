@@ -3,6 +3,8 @@ package hitonoriol.voxelsandbox.entity;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
 
 import hitonoriol.voxelsandbox.assets.Models;
 import hitonoriol.voxelsandbox.assets.Prefs;
@@ -15,6 +17,11 @@ public class Player extends Creature {
 
 	public Player() {
 		super(Models.player);
+		initBody(info -> {
+			info.setMass(0);
+			info.setLinearSleepingThreshold(0);
+			info.setAngularSleepingThreshold(0);
+		});
 		initCamera();
 		setMovementSpeed(10);
 	}
@@ -70,12 +77,14 @@ public class Player extends Creature {
 	@Override
 	protected void positionChanged() {
 		super.positionChanged();
+		syncBody();
 		updateCamera();
 	}
 
 	@Override
 	public void applyTransform() {
 		super.applyTransform();
+		syncBody();
 		updateCamera();
 	}
 }

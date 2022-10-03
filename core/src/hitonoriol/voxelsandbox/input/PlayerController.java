@@ -1,12 +1,25 @@
 package hitonoriol.voxelsandbox.input;
 
+import static hitonoriol.voxelsandbox.VoxelSandbox.player;
+import static hitonoriol.voxelsandbox.VoxelSandbox.world;
+
+import java.util.function.Consumer;
+
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Buttons;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Cursor.SystemCursor;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.Ray;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
+import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
 
+import hitonoriol.voxelsandbox.assets.Prefs;
+import hitonoriol.voxelsandbox.assets.ShapeBuilder;
+import hitonoriol.voxelsandbox.entity.Entity;
 import hitonoriol.voxelsandbox.entity.Player;
+import hitonoriol.voxelsandbox.io.Out;
 import hitonoriol.voxelsandbox.util.Utils;
 
 public class PlayerController extends PollableInputAdapter {
@@ -15,8 +28,13 @@ public class PlayerController extends PollableInputAdapter {
 	private float sensitivity = 0.2f;
 	private int mouseX = Gdx.graphics.getWidth() / 2, mouseY = Gdx.graphics.getHeight() / 2;
 	private Vector3 tmpVec = new Vector3();
-	private final static float MAX_DELTA = 85f;
 
+	private final static Vector3 JUMP_IMPULSE = new Vector3(Vector3.Y).scl(10f);
+	private final static float MAX_REACH = 50f;
+	private Vector3 rayFromPos = new Vector3();
+	private Vector3 rayToPos = new Vector3();
+
+	private final static float MAX_DELTA = 85f;
 	private final static float VERTICAL_BOUND = 0.95f;
 
 	public PlayerController(Player player) {
@@ -26,9 +44,8 @@ public class PlayerController extends PollableInputAdapter {
 		Gdx.input.setCursorPosition(mouseX, mouseY);
 		Gdx.input.setCursorCatched(true);
 	}
-
-	@Override
-	public boolean mouseMoved(int screenX, int screenY) {
+	
+	private void handleCameraRotation(int screenX, int screenY) {
 		float dx = Utils.clamp(mouseX - screenX, MAX_DELTA);
 		float dy = Utils.clamp(mouseY - screenY, MAX_DELTA);
 		float rotX = Math.signum(dx) * Math.abs(dx) * sensitivity;
@@ -47,6 +64,72 @@ public class PlayerController extends PollableInputAdapter {
 		player.applyTransform();
 		mouseX = screenX;
 		mouseY = screenY;
+	}
+
+	@Override
+	public boolean mouseMoved(int screenX, int screenY) {
+		handleCameraRotation(screenX, screenY);
+		return false;
+	}
+
+	@Override
+	public boolean touchDragged(int screenX, int screenY, int pointer) {
+		handleCameraRotation(screenX, screenY);
+		return false;
+	}
+	
+	private Ray cameraRay() {
+		return camera.getPickRay(Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
+	}
+
+	private void raycast(Ray ray, Consumer<btCollisionObject> rayAction) {
+		rayFromPos.set(ray.origin);
+		rayToPos.set(ray.direction).scl(MAX_REACH).add(ray.origin);
+		world().raycast(rayFromPos, rayToPos, rayAction);
+	}
+
+	@Override
+	public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+		switch (button) {
+		case Buttons.LEFT: {
+			Ray ray = cameraRay();
+			raycast(ray, object -> {
+				if (object instanceof btRigidBody obj) {
+					obj.activate();
+					obj.applyCentralImpulse(ray.direction.scl(50f));
+				}
+			});
+			break;
+		}
+		case Buttons.RIGHT: {
+			Ray ray = cameraRay();
+			Entity projectile = new ShapeBuilder().sphere(1f);
+			var startPoint = ray.direction.cpy().scl(1.5f).add(player.getPosition());
+			startPoint.y = player.getHeight() * Prefs.values().firstPersonVerticalFactor;
+			Out.print("Start: %s", startPoint);
+			projectile.getBody().setRestitution(0.75f);
+			projectile.setMass(0.5f);
+			projectile.placeAt(startPoint);
+			projectile.syncBody();
+			projectile.getBody().applyCentralImpulse(ray.direction.cpy().scl(35f));
+			world().addEntity(projectile);
+			break;
+		}
+		default:
+			break;
+		}
+		return super.touchDown(screenX, screenY, pointer, button);
+	}
+
+	@Override
+	public boolean keyDown(int keycode) {
+		switch (keycode) {
+		case Keys.SPACE:
+			player().getBody().applyCentralImpulse(JUMP_IMPULSE);
+			break;
+		default:
+			break;
+		}
 		return false;
 	}
 

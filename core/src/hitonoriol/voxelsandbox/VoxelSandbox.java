@@ -1,6 +1,8 @@
 package hitonoriol.voxelsandbox;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.physics.bullet.Bullet;
+import com.kotcrab.vis.ui.VisUI;
 
 import hitonoriol.voxelsandbox.assets.Assets;
 import hitonoriol.voxelsandbox.entity.Player;
@@ -20,6 +22,8 @@ public class VoxelSandbox extends Game {
 	
 	@Override
 	public void create() {
+		VisUI.load();
+		Bullet.init();
 		createScreens();
 		GameInput.register(Keyboard.get());
 	}
@@ -50,5 +54,6 @@ public class VoxelSandbox extends Game {
 	public void dispose() {
 		gameScreen.dispose();
 		Assets.manager().dispose();
+		VisUI.dispose();
 	}
 }
