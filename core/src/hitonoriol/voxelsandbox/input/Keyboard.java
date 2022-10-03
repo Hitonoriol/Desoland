@@ -1,11 +1,15 @@
 package hitonoriol.voxelsandbox.input;
 
+import static hitonoriol.voxelsandbox.VoxelSandbox.player;
+
 import java.util.HashSet;
 import java.util.Set;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.InputAdapter;
+
+import hitonoriol.voxelsandbox.assets.Prefs;
 
 public class Keyboard extends InputAdapter {
 	private Set<Integer> pressedKeys = new HashSet<>();
@@ -26,6 +30,11 @@ public class Keyboard extends InputAdapter {
 		switch (key) {
 		case Keys.ESCAPE:
 			Gdx.input.setCursorCatched(!Gdx.input.isCursorCatched());
+			break;
+		case Keys.F1:
+			Prefs.values().firstPersonCamera ^= true;
+			player().applyTransform();
+			break;
 		default:
 			break;
 		}

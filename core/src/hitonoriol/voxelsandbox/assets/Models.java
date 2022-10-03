@@ -1,16 +1,15 @@
 package hitonoriol.voxelsandbox.assets;
 
-import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g3d.Model;
 
-import net.mgsx.gltf.loaders.gltf.GLTFLoader;
 import net.mgsx.gltf.scene3d.scene.Scene;
 import net.mgsx.gltf.scene3d.scene.SceneAsset;
 
 public class Models {
-	public static final SceneAsset player = loadModel("models/player/player.gltf");
+	public static final Model player = loadModel("models/player/player.gltf");
 	
-	public static SceneAsset loadModel(String modelPath) {
-		return new GLTFLoader().load(Gdx.files.internal(modelPath), true);
+	public static Model loadModel(String modelPath) {
+		return Assets.load(modelPath, SceneAsset.class).scene.model;
 	}
 	
 	public static Scene create(SceneAsset modelAsset) {

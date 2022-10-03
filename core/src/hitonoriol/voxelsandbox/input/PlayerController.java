@@ -2,19 +2,20 @@ package hitonoriol.voxelsandbox.input;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
-import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Cursor.SystemCursor;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
 
 import hitonoriol.voxelsandbox.entity.Player;
+import hitonoriol.voxelsandbox.util.Utils;
 
-public class PlayerController extends InputAdapter {
+public class PlayerController extends PollableInputAdapter {
 	private PerspectiveCamera camera;
 	private Player player;
 	private float sensitivity = 0.2f;
 	private int mouseX = Gdx.graphics.getWidth() / 2, mouseY = Gdx.graphics.getHeight() / 2;
-	private Vector3 tmpVec = new Vector3(), tmpVecB = new Vector3();
+	private Vector3 tmpVec = new Vector3();
+	private final static float MAX_DELTA = 85f;
 
 	private final static float VERTICAL_BOUND = 0.95f;
 
@@ -28,7 +29,8 @@ public class PlayerController extends InputAdapter {
 
 	@Override
 	public boolean mouseMoved(int screenX, int screenY) {
-		float dx = mouseX - screenX, dy = mouseY - screenY;
+		float dx = Utils.clamp(mouseX - screenX, MAX_DELTA);
+		float dy = Utils.clamp(mouseY - screenY, MAX_DELTA);
 		float rotX = Math.signum(dx) * Math.abs(dx) * sensitivity;
 		float rotY = Math.signum(dy) * Math.abs(dy) * sensitivity;
 
@@ -48,6 +50,7 @@ public class PlayerController extends InputAdapter {
 		return false;
 	}
 
+	@Override
 	public void pollKeys() {
 		Keyboard.getPressedKeys().forEach(this::processMovement);
 	}
@@ -67,12 +70,11 @@ public class PlayerController extends InputAdapter {
 		moveTranslation.nor().scl(moveBy);
 		player.applyMovement();
 	}
-	
+
 	public static class Movement {
-		private static final Vector3
-				Forward = new Vector3(1, 0, 1),
+		private static final Vector3 Forward = new Vector3(1, 0, 1),
 				Backward = new Vector3(-1, 0, -1);
-	
+
 		public static boolean isValidKey(int key) {
 			switch (key) {
 			case Keys.W:
@@ -84,13 +86,13 @@ public class PlayerController extends InputAdapter {
 				return false;
 			}
 		}
-	
+
 		public static void applyDirection(Vector3 direction, int key) {
 			if (key == Keys.W)
 				direction.scl(Forward);
 			else if (key == Keys.S)
 				direction.scl(Backward);
-	
+
 			if (key == Keys.A)
 				direction.crs(Vector3.Y).scl(-1f);
 			else if (key == Keys.D)

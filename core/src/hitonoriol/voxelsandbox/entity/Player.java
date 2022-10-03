@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
 
 import hitonoriol.voxelsandbox.assets.Models;
+import hitonoriol.voxelsandbox.assets.Prefs;
 import hitonoriol.voxelsandbox.input.PlayerController;
 
 public class Player extends Creature {
@@ -34,23 +35,41 @@ public class Player extends Creature {
 	}
 
 	private void syncCamera() {
-		camera.position.set(getPosition());
+		updateCamera();
 		updateRotation();
 	}
-	
+
 	public void updateRotation() {
 		tmpVec.set(camera.direction.x, 0, camera.direction.z).nor();
 		rotate(Vector3.X, tmpVec);
 	}
 
 	private void updateCamera() {
-		camera.position.set(getPosition());
+		camera.position.set(getPOV());
 		camera.update();
 	}
 
+	private Vector3 getPOV() {
+		var prefs = Prefs.values();
+		if (prefs.firstPersonCamera)
+			return tmpVec.set(getDirection()).nor().scl(prefs.firstPersonHorizontalDistance)
+					.add(getPosition())
+					.set(tmpVec.x,
+							getHeight() * prefs.firstPersonVerticalFactor,
+							tmpVec.z);
+		else {
+			var dirVector = getDirection();
+			var distance = prefs.thirdPersonHorizontalDistance;
+			return tmpVec.set(getPosition())
+					.add(-dirVector.x * distance,
+							getHeight() + prefs.thirdPersonVerticalDistance,
+							-dirVector.z * distance);
+		}
+	}
+
 	@Override
-	protected void positionModified() {
-		super.positionModified();
+	protected void positionChanged() {
+		super.positionChanged();
 		updateCamera();
 	}
 
