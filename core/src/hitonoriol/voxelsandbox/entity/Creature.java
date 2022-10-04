@@ -33,7 +33,6 @@ public class Creature extends Entity {
 
 	public void applyMovement() {
 		getBody().translate(moveTranslation);
-		moveTranslation.setZero();
 	}
 
 	public void move(Consumer<Vector3> moveTranslationSetter) {

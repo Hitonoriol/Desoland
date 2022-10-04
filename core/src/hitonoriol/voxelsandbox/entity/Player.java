@@ -22,6 +22,8 @@ public class Player extends Creature {
 			info.setMass(1);
 			info.setLinearSleepingThreshold(0);
 			info.setAngularSleepingThreshold(0);
+			info.setFriction(1f);
+			info.setLinearDamping(0.65f);
 		}, Vector3.Zero);
 		initCamera();
 		setMovementSpeed(10);
@@ -29,7 +31,7 @@ public class Player extends Creature {
 
 	@Override
 	protected btCollisionShape createDefaultCollisionShape() {
-		return new btCapsuleShape(getDepth() * 0.5f, getHeight() * 0.5f);
+		return new btCapsuleShape(getDepth() * 0.25f, getHeight() * 0.45f);
 	}
 
 	private void initCamera() {
@@ -67,13 +69,13 @@ public class Player extends Creature {
 
 	private Vector3 getPOV() {
 		var prefs = Prefs.values();
-		if (prefs.firstPersonCamera)
-			return tmpVec.set(getDirection()).nor().scl(prefs.firstPersonHorizontalDistance)
-					.add(getPosition())
-					.set(tmpVec.x,
-							tmpVec.y + getHeight() * prefs.firstPersonVerticalFactor,
-							tmpVec.z);
-		else {
+		if (prefs.firstPersonCamera) {
+			tmpVec.set(getDirection()).nor().scl(prefs.firstPersonHorizontalDistance);
+			tmpVec.y = 0;
+			tmpVec.add(getPosition());
+			tmpVec.y += getHeight() * prefs.firstPersonVerticalFactor;
+			return tmpVec;
+		} else {
 			var dirVector = getDirection();
 			var distance = prefs.thirdPersonHorizontalDistance;
 			return tmpVec.set(getPosition())

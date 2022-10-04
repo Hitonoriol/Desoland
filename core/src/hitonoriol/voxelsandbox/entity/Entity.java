@@ -51,7 +51,7 @@ public class Entity extends ModelInstance implements Disposable {
 		if (hasBody())
 			return;
 
-		var info = new btRigidBodyConstructionInfo(1f, motionState, null, Vector3.Zero);
+		var info = new btRigidBodyConstructionInfo(0f, motionState, null, Vector3.Zero);
 		if (initializer != null)
 			initializer.accept(info);
 
@@ -92,7 +92,10 @@ public class Entity extends ModelInstance implements Disposable {
 	}
 
 	public void setMass(float mass) {
-		rigidBody.setMassProps(mass, Vector3.Zero);
+		Vector3 inertia = new Vector3();
+		rigidBody.getCollisionShape().calculateLocalInertia(mass, inertia);
+		rigidBody.setMassProps(mass, inertia);
+		rigidBody.activate();
 	}
 
 	public boolean hasBody() {
@@ -127,6 +130,10 @@ public class Entity extends ModelInstance implements Disposable {
 		return center;
 	}
 
+	public boolean isStatic() {
+		return rigidBody.getInvMass() == 0;
+	}
+	
 	public boolean isDestroyed() {
 		return dead;
 	}
@@ -201,6 +208,13 @@ public class Entity extends ModelInstance implements Disposable {
 		motionState.dispose();
 	}
 
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof Entity entity)
+			return position.equals(entity.position);
+		return false;
+	}
+	
 	private String getDebugName() {
 		return String.format("%s (%X, dimensions: %s)",
 				getClass().getSimpleName(), hashCode(), Utils.vectorString(dimensions));

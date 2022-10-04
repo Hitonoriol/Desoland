@@ -1,7 +1,9 @@
 package hitonoriol.voxelsandbox.world;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import com.badlogic.gdx.Gdx;
@@ -30,6 +32,7 @@ import com.badlogic.gdx.physics.bullet.linearmath.btIDebugDraw.DebugDrawModes;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Timer;
 
+import hitonoriol.voxelsandbox.assets.Prefs;
 import hitonoriol.voxelsandbox.assets.ShapeBuilder;
 import hitonoriol.voxelsandbox.entity.Entity;
 import hitonoriol.voxelsandbox.entity.Player;
@@ -48,6 +51,7 @@ public class World extends SceneManager {
 
 	private final Array<RenderableProvider> renderableProviders = super.getRenderableProviders();
 	private final List<Entity> entities = new ArrayList<>();
+	private final Set<Entity> terrain = new HashSet<>();
 
 	private Cubemap diffuseCubemap;
 	private Cubemap environmentCubemap;
@@ -65,8 +69,7 @@ public class World extends SceneManager {
 			collisionDispatcher, broadphase, constraintSolver, collisionConfiguration);
 
 	private int size = 200;
-	private final Vector3 gravity = new Vector3(0, -30f, 0);
-	private Entity ground;
+	private final Vector3 gravity = new Vector3(0, -32f, 0);
 
 	private Player player = new Player();
 
@@ -108,15 +111,13 @@ public class World extends SceneManager {
 	private void initPhysics() {
 		physicsPropertiesChanged();
 		dynamicsWorld.setDebugDrawer(debugDrawer);
-		debugDrawer.setDebugMode(DebugDrawModes.DBG_DrawWireframe);
+		debugDrawer.setDebugMode(Prefs.debug ? DebugDrawModes.DBG_DrawWireframe : DebugDrawModes.DBG_NoDebug);
 	}
 
 	private void setUpScene() {
 		for (int i = 0; i < 100; ++i)
 			spawnRandomShape();
-
-		placeEntity(ground = shapeBuilder.box(size, 1, size), 0, -0.5f, 0);
-		ground.setMass(0);
+		addTerrain(0, 0, size, size);
 
 		Timer.instance().scheduleTask(new Timer.Task() {
 			@Override
@@ -128,12 +129,21 @@ public class World extends SceneManager {
 		}, 0f, 3f);
 	}
 
+	private void addTerrain(float x, float z, float w, float d) {
+		Entity ground = shapeBuilder.box(w, 1, d);
+		placeEntity(ground, x, -0.5f, z);
+		terrain.add(ground);
+	}
+
 	private void spawnRandomShape() {
 		float minSize = 1, maxSize = 20;
 		Entity shape = shapeBuilder.random(Random.nextFloat(minSize, maxSize));
+		shape.setMass(Random.nextFloat(0.1f, 5f));
 		shape.rotate(Vector3.Z, Random.nextFloat(0, 270f));
 		placeEntity(shape);
-		shape.getBody().setRestitution(Random.nextFloat(0, 0.75f));
+
+		var body = shape.getBody();
+		body.setRestitution(Random.nextFloat(0, 0.75f));
 	}
 
 	private Entity placeEntity(Entity entity) {
@@ -212,7 +222,7 @@ public class World extends SceneManager {
 	public btDynamicsWorld getDynamicsWorld() {
 		return dynamicsWorld;
 	}
-	
+
 	@Override
 	public void dispose() {
 		environmentCubemap.dispose();
