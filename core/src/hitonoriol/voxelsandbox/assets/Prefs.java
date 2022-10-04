@@ -6,6 +6,9 @@ public class Prefs {
 	public float firstPersonHorizontalDistance = 2f;
 	public float thirdPersonHorizontalDistance = 13.5f;
 	public float thirdPersonVerticalDistance = 5f;
+	
+	public float cameraFov = 75f;
+	public float cameraSprintingFov = 95f;
 
 	private static final Prefs instance = new Prefs();
 

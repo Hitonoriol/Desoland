@@ -6,6 +6,7 @@ import static java.lang.String.format;
 
 import java.util.function.Supplier;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.Align;
@@ -22,6 +23,7 @@ public class GameStage extends Stage {
 	private VisLabel coordsLabel = new VisLabel();
 	private VisLabel directionLabel = new VisLabel();
 	private VisLabel objectCountLabel = new VisLabel();
+	private VisLabel fpsLabel = new VisLabel();
 
 	public GameStage() {
 		root.setFillParent(true);
@@ -30,18 +32,18 @@ public class GameStage extends Stage {
 
 		infoTable.align(Align.bottomLeft);
 		infoTable.defaults().padRight(5);
-		infoTable.add(coordsLabel);
-		infoTable.add(directionLabel);
-		infoTable.add(objectCountLabel);
-		update(coordsLabel,
+		addInfo(coordsLabel,
 				() -> format("[World position: %s]", Utils.vectorString(player().getPosition())), 0.5f);
-		update(directionLabel,
+		addInfo(directionLabel,
 				() -> format("[Direction: %s]", Utils.vectorString(player().getDirection())), 0.5f);
-		update(objectCountLabel,
+		addInfo(objectCountLabel,
 				() -> format("[Physical objects: %d]", world().getDynamicsWorld().getNumCollisionObjects()), 0.5f);
+		addInfo(fpsLabel,
+				() -> format("[FPS: %d]", Gdx.graphics.getFramesPerSecond()), 1f);
 	}
-
-	private void update(Label label, Supplier<String> updater, float interval) {
+	
+	private void addInfo(Label label, Supplier<String> updater, float interval) {
+		infoTable.add(label);
 		update(() -> label.setText(updater.get()), interval);
 	}
 

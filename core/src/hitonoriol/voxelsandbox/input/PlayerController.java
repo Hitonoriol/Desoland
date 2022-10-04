@@ -29,10 +29,13 @@ public class PlayerController extends PollableInputAdapter {
 	private int mouseX = Gdx.graphics.getWidth() / 2, mouseY = Gdx.graphics.getHeight() / 2;
 	private Vector3 tmpVec = new Vector3();
 
-	private final static Vector3 JUMP_IMPULSE = new Vector3(Vector3.Y).scl(10f);
+	private final static Vector3 JUMP_IMPULSE = new Vector3(Vector3.Y).scl(20f);
 	private final static float MAX_REACH = 50f;
 	private Vector3 rayFromPos = new Vector3();
 	private Vector3 rayToPos = new Vector3();
+
+	private final static float SPRINT_FACTOR = 1.75f;
+	private boolean sprinting = false;
 
 	private final static float MAX_DELTA = 85f;
 	private final static float VERTICAL_BOUND = 0.95f;
@@ -44,7 +47,7 @@ public class PlayerController extends PollableInputAdapter {
 		Gdx.input.setCursorPosition(mouseX, mouseY);
 		Gdx.input.setCursorCatched(true);
 	}
-	
+
 	private void handleCameraRotation(int screenX, int screenY) {
 		float dx = Utils.clamp(mouseX - screenX, MAX_DELTA);
 		float dy = Utils.clamp(mouseY - screenY, MAX_DELTA);
@@ -61,7 +64,6 @@ public class PlayerController extends PollableInputAdapter {
 			player.updateRotation();
 		}
 
-		player.applyTransform();
 		mouseX = screenX;
 		mouseY = screenY;
 	}
@@ -77,7 +79,7 @@ public class PlayerController extends PollableInputAdapter {
 		handleCameraRotation(screenX, screenY);
 		return false;
 	}
-	
+
 	private Ray cameraRay() {
 		return camera.getPickRay(Gdx.graphics.getWidth() / 2, Gdx.graphics.getHeight() / 2);
 	}
@@ -104,14 +106,14 @@ public class PlayerController extends PollableInputAdapter {
 		case Buttons.RIGHT: {
 			Ray ray = cameraRay();
 			Entity projectile = new ShapeBuilder().sphere(1f);
-			var startPoint = ray.direction.cpy().scl(1.5f).add(player.getPosition());
-			startPoint.y = player.getHeight() * Prefs.values().firstPersonVerticalFactor;
+			var startPoint = player.getPosition().cpy().add(ray.direction.cpy().scl(1.5f));
+			startPoint.y = player.getPosition().y + player.getHeight() * Prefs.values().firstPersonVerticalFactor;
 			Out.print("Start: %s", startPoint);
-			projectile.getBody().setRestitution(0.75f);
+			projectile.getBody().setRestitution(0.85f);
 			projectile.setMass(0.5f);
 			projectile.placeAt(startPoint);
 			projectile.syncBody();
-			projectile.getBody().applyCentralImpulse(ray.direction.cpy().scl(35f));
+			projectile.getBody().applyCentralImpulse(ray.direction.cpy().scl(100f));
 			world().addEntity(projectile);
 			break;
 		}
@@ -124,9 +126,33 @@ public class PlayerController extends PollableInputAdapter {
 	@Override
 	public boolean keyDown(int keycode) {
 		switch (keycode) {
-		case Keys.SPACE:
-			player().getBody().applyCentralImpulse(JUMP_IMPULSE);
+		case Keys.SPACE: {
+			var body = player().getBody();
+			if (body.getLinearVelocity().y == 0)
+				body.applyCentralImpulse(JUMP_IMPULSE);
+			else {
+				Out.print("Can't jump: velocity = %s", body.getLinearVelocity());
+			}
 			break;
+		}
+
+		case Keys.SHIFT_LEFT:
+			sprinting = true;
+			break;
+
+		default:
+			break;
+		}
+		return false;
+	}
+
+	@Override
+	public boolean keyUp(int keycode) {
+		switch (keycode) {
+		case Keys.SHIFT_LEFT:
+			sprinting = false;
+			break;
+
 		default:
 			break;
 		}
@@ -143,8 +169,13 @@ public class PlayerController extends PollableInputAdapter {
 			return;
 
 		float moveBy = player.getMovementSpeed() * Gdx.graphics.getDeltaTime();
-		Vector3 moveTranslation = player.getXZMoveTranslation();
+		if (sprinting)
+			moveBy *= SPRINT_FACTOR;
 
+		var prefs = Prefs.values();
+		camera.fieldOfView = sprinting ? prefs.cameraSprintingFov : prefs.cameraFov;
+
+		Vector3 moveTranslation = player.getXZMoveTranslation();
 		Movement.applyDirection(moveTranslation, key);
 
 		if (moveTranslation.isZero())

@@ -1,10 +1,8 @@
 package hitonoriol.voxelsandbox.world;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
@@ -36,7 +34,6 @@ import hitonoriol.voxelsandbox.assets.ShapeBuilder;
 import hitonoriol.voxelsandbox.entity.Entity;
 import hitonoriol.voxelsandbox.entity.Player;
 import hitonoriol.voxelsandbox.input.GameInput;
-import hitonoriol.voxelsandbox.io.Out;
 import hitonoriol.voxelsandbox.random.Random;
 import net.mgsx.gltf.scene3d.attributes.PBRCubemapAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRTextureAttribute;
@@ -58,6 +55,7 @@ public class World extends SceneManager {
 	private SceneSkybox skybox;
 	private DirectionalLightEx light = new DirectionalShadowLight();
 
+	private static final int MAX_SUBSTEPS = 4;
 	private static final int MAX_COLLISION_OBJECTS = 500;
 	private btCollisionConfiguration collisionConfiguration = new btDefaultCollisionConfiguration();
 	private btDispatcher collisionDispatcher = new btCollisionDispatcher(collisionConfiguration);
@@ -67,7 +65,7 @@ public class World extends SceneManager {
 			collisionDispatcher, broadphase, constraintSolver, collisionConfiguration);
 
 	private int size = 200;
-	private final Vector3 gravity = new Vector3(0, -9.8f, 0);
+	private final Vector3 gravity = new Vector3(0, -30f, 0);
 	private Entity ground;
 
 	private Player player = new Player();
@@ -110,7 +108,7 @@ public class World extends SceneManager {
 	private void initPhysics() {
 		physicsPropertiesChanged();
 		dynamicsWorld.setDebugDrawer(debugDrawer);
-		debugDrawer.setDebugMode(DebugDrawModes.DBG_NoDebug);
+		debugDrawer.setDebugMode(DebugDrawModes.DBG_DrawWireframe);
 	}
 
 	private void setUpScene() {
@@ -178,7 +176,7 @@ public class World extends SceneManager {
 
 	@Override
 	public void update(float delta) {
-		dynamicsWorld.stepSimulation(delta);
+		dynamicsWorld.stepSimulation(delta, MAX_SUBSTEPS);
 		super.update(delta);
 	}
 

@@ -33,7 +33,7 @@ public class Keyboard extends InputAdapter {
 			break;
 		case Keys.F1:
 			Prefs.values().firstPersonCamera ^= true;
-			player().applyTransform();
+			player().updateCamera();
 			break;
 		default:
 			break;

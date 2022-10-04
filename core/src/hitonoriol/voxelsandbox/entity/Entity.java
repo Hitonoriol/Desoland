@@ -47,7 +47,7 @@ public class Entity extends ModelInstance implements Disposable {
 	}
 
 	/* Construct a btRigidBodyConstructionInfo with some default values and pass it to `initializer` for customization */
-	public void initBody(Consumer<btRigidBodyConstructionInfo> initializer) {
+	public void initBody(Consumer<btRigidBodyConstructionInfo> initializer, Vector3 localInertia) {
 		if (hasBody())
 			return;
 
@@ -60,11 +60,17 @@ public class Entity extends ModelInstance implements Disposable {
 		if (shape == null)
 			info.setCollisionShape(shape = createDefaultCollisionShape());
 
-		Vector3 inertia = new Vector3();
-		shape.calculateLocalInertia(info.getMass(), inertia);
-		info.setLocalInertia(new btVector3(inertia.x, inertia.y, inertia.z));
+		if (localInertia == null) {
+			localInertia = new Vector3();
+			shape.calculateLocalInertia(info.getMass(), localInertia);
+		}
+		info.setLocalInertia(new btVector3(localInertia.x, localInertia.y, localInertia.z));
 		applyTransform();
 		rigidBody = new btRigidBody(info);
+	}
+
+	public void initBody(Consumer<btRigidBodyConstructionInfo> initializer) {
+		initBody(initializer, null);
 	}
 
 	public void setCollisionShape(btCollisionShape shape) {
@@ -76,8 +82,9 @@ public class Entity extends ModelInstance implements Disposable {
 	}
 
 	public void syncBody() {
-		if (rigidBody != null)
-			rigidBody.setWorldTransform(transform);
+		if (rigidBody != null) {
+			rigidBody.proceedToTransform(transform);
+		}
 	}
 
 	protected btCollisionShape createDefaultCollisionShape() {
@@ -155,6 +162,9 @@ public class Entity extends ModelInstance implements Disposable {
 
 	public void rotate(Vector3 axis, Vector3 direction) {
 		rotation.setFromCross(axis, direction);
+		if (hasBody()) {
+			rigidBody.setCenterOfMassTransform(transform.set(position, rotation, scale));
+		}
 	}
 
 	public void rotate(Vector3 axis, float angle) {
@@ -181,7 +191,7 @@ public class Entity extends ModelInstance implements Disposable {
 		return scale;
 	}
 
-	public void applyTransform() {
+	protected void applyTransform() {
 		transform.set(position, rotation, scale);
 	}
 

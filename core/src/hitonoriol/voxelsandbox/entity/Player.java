@@ -3,7 +3,7 @@ package hitonoriol.voxelsandbox.entity;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.physics.bullet.collision.btBoxShape;
+import com.badlogic.gdx.physics.bullet.collision.btCapsuleShape;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
 
 import hitonoriol.voxelsandbox.assets.Models;
@@ -11,19 +11,25 @@ import hitonoriol.voxelsandbox.assets.Prefs;
 import hitonoriol.voxelsandbox.input.PlayerController;
 
 public class Player extends Creature {
-	private PerspectiveCamera camera = new PerspectiveCamera(75f, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+	private PerspectiveCamera camera = new PerspectiveCamera(Prefs.values().cameraFov,
+			Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	private PlayerController controller = new PlayerController(this);
 	private Vector3 tmpVec = new Vector3();
 
 	public Player() {
 		super(Models.player);
 		initBody(info -> {
-			info.setMass(0);
+			info.setMass(1);
 			info.setLinearSleepingThreshold(0);
 			info.setAngularSleepingThreshold(0);
-		});
+		}, Vector3.Zero);
 		initCamera();
 		setMovementSpeed(10);
+	}
+
+	@Override
+	protected btCollisionShape createDefaultCollisionShape() {
+		return new btCapsuleShape(getDepth() * 0.5f, getHeight() * 0.5f);
 	}
 
 	private void initCamera() {
@@ -51,7 +57,10 @@ public class Player extends Creature {
 		rotate(Vector3.X, tmpVec);
 	}
 
-	private void updateCamera() {
+	@Override
+	protected void rotationChanged() {}
+
+	public void updateCamera() {
 		camera.position.set(getPOV());
 		camera.update();
 	}
@@ -62,7 +71,7 @@ public class Player extends Creature {
 			return tmpVec.set(getDirection()).nor().scl(prefs.firstPersonHorizontalDistance)
 					.add(getPosition())
 					.set(tmpVec.x,
-							getHeight() * prefs.firstPersonVerticalFactor,
+							tmpVec.y + getHeight() * prefs.firstPersonVerticalFactor,
 							tmpVec.z);
 		else {
 			var dirVector = getDirection();
@@ -77,14 +86,6 @@ public class Player extends Creature {
 	@Override
 	protected void positionChanged() {
 		super.positionChanged();
-		syncBody();
-		updateCamera();
-	}
-
-	@Override
-	public void applyTransform() {
-		super.applyTransform();
-		syncBody();
 		updateCamera();
 	}
 }

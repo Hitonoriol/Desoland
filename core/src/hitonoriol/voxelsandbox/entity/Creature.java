@@ -26,16 +26,14 @@ public class Creature extends Entity {
 	public Vector3 getMoveTranslation() {
 		return moveTranslation;
 	}
-	
+
 	public Vector3 getXZMoveTranslation() {
 		return moveTranslation.set(direction.x, 0, direction.z);
 	}
-	
+
 	public void applyMovement() {
-		applyTransform();
-		transform.trn(moveTranslation);
+		getBody().translate(moveTranslation);
 		moveTranslation.setZero();
-		positionChanged();
 	}
 
 	public void move(Consumer<Vector3> moveTranslationSetter) {
