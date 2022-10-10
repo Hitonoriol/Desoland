@@ -1,5 +1,8 @@
 package hitonoriol.voxelsandbox;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.physics.bullet.Bullet;
 import com.kotcrab.vis.ui.VisUI;
@@ -13,6 +16,7 @@ import hitonoriol.voxelsandbox.world.World;
 
 public class VoxelSandbox extends Game {
 	private GameScreen gameScreen;
+	private List<Runnable> initTasks = new ArrayList<>();
 
 	private static VoxelSandbox game;
 	
@@ -26,6 +30,7 @@ public class VoxelSandbox extends Game {
 		Bullet.init();
 		createScreens();
 		GameInput.register(Keyboard.get());
+		finalizeInit();
 	}
 
 	private void createScreens() {
@@ -48,6 +53,15 @@ public class VoxelSandbox extends Game {
 	
 	public static VoxelSandbox game() {
 		return game;
+	}
+	
+	public static void deferInit(Runnable task) {
+		game.initTasks.add(task);
+	}
+	
+	private void finalizeInit() {
+		initTasks.forEach(Runnable::run);
+		initTasks.clear();
 	}
 	
 	@Override

@@ -59,7 +59,7 @@ public class PlayerController extends PollableInputAdapter {
 		float rotX = Math.signum(dx) * Math.abs(dx) * sensitivity;
 		float rotY = Math.signum(dy) * Math.abs(dy) * sensitivity;
 
-		if (rotX != 0 || rotY != 0) {
+		if (Gdx.input.isCursorCatched() && (rotX != 0 || rotY != 0)) {
 			camera.rotate(Vector3.Y, rotX);
 
 			if ((dy < 0 && camera.direction.y > -VERTICAL_BOUND)
@@ -168,9 +168,16 @@ public class PlayerController extends PollableInputAdapter {
 		return false;
 	}
 
+	private static Vector3 UP = Vector3.Y.cpy().scl(50);
+	private static Vector3 DOWN = UP.cpy().scl(-1);
+
 	@Override
 	public void pollKeys() {
 		Keyboard.getPressedKeys().forEach(this::processMovement);
+		if (Gdx.input.isKeyPressed(Keys.R))
+			player.getBody().applyCentralForce(UP);
+		else if (Gdx.input.isKeyPressed(Keys.F))
+			player.getBody().applyCentralForce(DOWN);
 	}
 
 	private void processMovement(int key) {

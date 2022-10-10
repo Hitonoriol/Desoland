@@ -1,9 +1,7 @@
 package hitonoriol.voxelsandbox.world;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 
 import com.badlogic.gdx.Gdx;
@@ -32,12 +30,15 @@ import com.badlogic.gdx.physics.bullet.linearmath.btIDebugDraw.DebugDrawModes;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Timer;
 
+import hitonoriol.voxelsandbox.assets.Materials;
 import hitonoriol.voxelsandbox.assets.Prefs;
 import hitonoriol.voxelsandbox.assets.ShapeBuilder;
 import hitonoriol.voxelsandbox.entity.Entity;
 import hitonoriol.voxelsandbox.entity.Player;
 import hitonoriol.voxelsandbox.input.GameInput;
 import hitonoriol.voxelsandbox.random.Random;
+import hitonoriol.voxelsandbox.voxel.Terrain;
+import net.mgsx.gltf.scene3d.attributes.FogAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRCubemapAttribute;
 import net.mgsx.gltf.scene3d.attributes.PBRTextureAttribute;
 import net.mgsx.gltf.scene3d.lights.DirectionalLightEx;
@@ -51,7 +52,6 @@ public class World extends SceneManager {
 
 	private final Array<RenderableProvider> renderableProviders = super.getRenderableProviders();
 	private final List<Entity> entities = new ArrayList<>();
-	private final Set<Entity> terrain = new HashSet<>();
 
 	private Cubemap diffuseCubemap;
 	private Cubemap environmentCubemap;
@@ -60,7 +60,6 @@ public class World extends SceneManager {
 	private DirectionalLightEx light = new DirectionalShadowLight();
 
 	private static final int MAX_SUBSTEPS = 4;
-	private static final int MAX_COLLISION_OBJECTS = 500;
 	private btCollisionConfiguration collisionConfiguration = new btDefaultCollisionConfiguration();
 	private btDispatcher collisionDispatcher = new btCollisionDispatcher(collisionConfiguration);
 	private btBroadphaseInterface broadphase = new btDbvtBroadphase();
@@ -68,10 +67,10 @@ public class World extends SceneManager {
 	private btDynamicsWorld dynamicsWorld = new btDiscreteDynamicsWorld(
 			collisionDispatcher, broadphase, constraintSolver, collisionConfiguration);
 
-	private int size = 200;
-	private final Vector3 gravity = new Vector3(0, -32f, 0);
+	private final Vector3 gravity = new Vector3(0, -32, 0);
 
 	private Player player = new Player();
+	private Terrain terrain = new Terrain(10);
 
 	private DebugDrawer debugDrawer = new DebugDrawer();
 	private ShapeBuilder shapeBuilder = new ShapeBuilder();
@@ -79,21 +78,26 @@ public class World extends SceneManager {
 	public World() {
 		super(MAX_BONES);
 		GameInput.register(player.getController());
+		player.placeAt(terrain.getVisualCenter(), 5, terrain.getVisualCenter());
+		player.syncBody();
 		addEntity(player);
 		setCamera(player.getCamera());
 		initLight();
 		initPhysics();
 		setUpScene();
+		terrain.generate();
+		addRenderable(terrain);
 	}
 
 	private void initLight() {
+		light.intensity = 2.5f;
 		light.direction.set(1, -3, 1).nor();
 		light.color.set(Color.WHITE);
 		environment.add(light);
 
 		IBLBuilder iblBuilder = IBLBuilder.createOutdoor(light);
 		environmentCubemap = iblBuilder.buildEnvMap(1024);
-		diffuseCubemap = iblBuilder.buildIrradianceMap(256);
+		diffuseCubemap = iblBuilder.buildIrradianceMap(512);
 		specularCubemap = iblBuilder.buildRadianceMap(10);
 		iblBuilder.dispose();
 
@@ -115,24 +119,26 @@ public class World extends SceneManager {
 	}
 
 	private void setUpScene() {
-		for (int i = 0; i < 100; ++i)
+		for (int i = 0; i < 200; ++i)
 			spawnRandomShape();
-		addTerrain(0, 0, size, size);
+		addGround(terrain.getVisualCenter(), terrain.getVisualCenter(), terrain.getVisualSize(), terrain.getVisualSize());
 
 		Timer.instance().scheduleTask(new Timer.Task() {
 			@Override
 			public void run() {
-				if (dynamicsWorld.getNumCollisionObjects() < MAX_COLLISION_OBJECTS) {
+				if (dynamicsWorld.getNumCollisionObjects() < 100) {
 					spawnRandomShape();
 				}
 			}
-		}, 0f, 3f);
+		}, 0f, 1.5f);
 	}
 
-	private void addTerrain(float x, float z, float w, float d) {
-		Entity ground = shapeBuilder.box(w, 1, d);
-		placeEntity(ground, x, -0.5f, z);
-		terrain.add(ground);
+	private void addGround(float x, float z, float w, float d) {
+		Entity ground = shapeBuilder.box(w, 0.5f, d);
+		ground.placeAt(x, -1f, z);
+		ground.syncBody();
+		dynamicsWorld.addRigidBody(ground.getBody());
+		//placeEntity(ground, x, -0.5f, z);
 	}
 
 	private void spawnRandomShape() {
@@ -144,13 +150,16 @@ public class World extends SceneManager {
 
 		var body = shape.getBody();
 		body.setRestitution(Random.nextFloat(0, 0.75f));
+		body.applyCentralImpulse(Random.vector3());
+		body.setGravity(Vector3.Zero);
 	}
 
 	private Entity placeEntity(Entity entity) {
+		var range = terrain.getVisualSize();
 		return placeEntity(entity,
-				Random.nextFloat(-size, size) / 2,
-				Random.nextFloat(20, size),
-				Random.nextFloat(-size, size) / 2);
+				Random.nextFloat(-range, range),
+				Random.nextFloat(20, 100),
+				Random.nextFloat(-range, range));
 	}
 
 	private Entity placeEntity(Entity entity, float x, float y, float z) {
@@ -164,16 +173,24 @@ public class World extends SceneManager {
 		dynamicsWorld.setGravity(gravity);
 	}
 
-	public void addEntity(Entity entity) {
+	public void addRenderable(RenderableProvider renderable) {
+		renderableProviders.add(renderable);
+	}
+
+	public void removeRenderable(RenderableProvider renderable) {
+		renderableProviders.removeValue(renderable, true);
+	}
+
+	public synchronized void addEntity(Entity entity) {
+		addRenderable(entity);
 		entities.add(entity);
-		renderableProviders.add(entity);
 		if (entity.hasBody())
 			dynamicsWorld.addRigidBody(entity.getBody());
 	}
 
-	private void removeEntity(Entity entity) {
+	private synchronized void removeEntity(Entity entity) {
+		removeRenderable(entity);
 		entities.remove(entity);
-		renderableProviders.removeValue(entity, true);
 		if (entity.hasBody())
 			dynamicsWorld.removeRigidBody(entity.getBody());
 	}

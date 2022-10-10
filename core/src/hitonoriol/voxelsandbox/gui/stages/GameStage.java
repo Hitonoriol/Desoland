@@ -15,6 +15,7 @@ import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 
 import hitonoriol.voxelsandbox.util.Utils;
+import hitonoriol.voxelsandbox.voxel.Terrain;
 
 public class GameStage extends Stage {
 	private VisTable root = new VisTable();
@@ -33,7 +34,12 @@ public class GameStage extends Stage {
 		infoTable.align(Align.bottomLeft);
 		infoTable.defaults().padRight(5);
 		addInfo(coordsLabel,
-				() -> format("[World position: %s]", Utils.vectorString(player().getPosition())), 0.5f);
+				() -> {
+					var position = player().getPosition();
+					return format("[World position: %s (chunk %d, %d)]",
+							Utils.vectorString(position),
+							(int) (position.x / Terrain.CHUNK_VISUAL_SIZE), (int) (position.z / Terrain.CHUNK_VISUAL_SIZE));
+				}, 0.5f);
 		addInfo(directionLabel,
 				() -> format("[Direction: %s]", Utils.vectorString(player().getDirection())), 0.5f);
 		addInfo(objectCountLabel,

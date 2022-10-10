@@ -6,9 +6,12 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.btCapsuleShape;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
 
+import hitonoriol.voxelsandbox.VoxelSandbox;
 import hitonoriol.voxelsandbox.assets.Models;
 import hitonoriol.voxelsandbox.assets.Prefs;
+import hitonoriol.voxelsandbox.input.GameInput;
 import hitonoriol.voxelsandbox.input.PlayerController;
+import net.mgsx.gltf.scene3d.attributes.FogAttribute;
 
 public class Player extends Creature {
 	private PerspectiveCamera camera = new PerspectiveCamera(Prefs.values().cameraFov,
@@ -22,11 +25,9 @@ public class Player extends Creature {
 			info.setMass(1);
 			info.setLinearSleepingThreshold(0);
 			info.setAngularSleepingThreshold(0);
-			info.setFriction(1f);
-			info.setLinearDamping(0.65f);
 		}, Vector3.Zero);
-		initCamera();
 		setMovementSpeed(10);
+		VoxelSandbox.deferInit(this::initCamera);
 	}
 
 	@Override
@@ -34,10 +35,16 @@ public class Player extends Creature {
 		return new btCapsuleShape(getDepth() * 0.25f, getHeight() * 0.45f);
 	}
 
+	public void setViewDistance(float distance) {
+		camera.far = distance + 25f;
+		VoxelSandbox.world().environment
+				.set(new FogAttribute(FogAttribute.FogEquation).set(camera.near, distance, 1f));
+	}
+
 	private void initCamera() {
 		camera.near = 0.01f;
-		camera.far = 1000;
 		setDirection(camera.direction);
+		setViewDistance(Prefs.values().cameraViewDistance);
 		syncCamera();
 	}
 
@@ -89,5 +96,11 @@ public class Player extends Creature {
 	protected void positionChanged() {
 		super.positionChanged();
 		updateCamera();
+	}
+	
+	@Override
+	public void dispose() {
+		GameInput.unregister(controller);
+		super.dispose();
 	}
 }

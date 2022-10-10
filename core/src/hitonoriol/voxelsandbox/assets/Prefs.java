@@ -1,7 +1,7 @@
 package hitonoriol.voxelsandbox.assets;
 
 public class Prefs {
-	public final static boolean debug = true;
+	public final static boolean debug = false;
 	
 	public boolean firstPersonCamera = true;
 	public float firstPersonVerticalFactor = 0.45f;
@@ -11,6 +11,7 @@ public class Prefs {
 	
 	public float cameraFov = 75f;
 	public float cameraSprintingFov = 95f;
+	public float cameraViewDistance = 250f;
 
 	private static final Prefs instance = new Prefs();
 

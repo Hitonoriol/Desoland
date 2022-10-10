@@ -2,6 +2,7 @@ package hitonoriol.voxelsandbox.entity;
 
 import java.util.function.Consumer;
 
+import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.Matrix4;
@@ -15,6 +16,7 @@ import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody.btRigidBodyConstruct
 import com.badlogic.gdx.physics.bullet.linearmath.btVector3;
 import com.badlogic.gdx.utils.Disposable;
 
+import hitonoriol.voxelsandbox.assets.Models;
 import hitonoriol.voxelsandbox.entity.physics.EntityMotionState;
 import hitonoriol.voxelsandbox.io.Out;
 import hitonoriol.voxelsandbox.util.Utils;
@@ -41,9 +43,13 @@ public class Entity extends ModelInstance implements Disposable {
 		Out.print("%s: %s",
 				getDebugName(), bounds);
 	}
+	
+	public Entity(Mesh mesh) {
+		this(Models.build(mesh));
+	}
 
-	public Entity(ModelInstance modelInstance) {
-		super(modelInstance);
+	public Entity() {
+		this(Models.emptyModel());		
 	}
 
 	/* Construct a btRigidBodyConstructionInfo with some default values and pass it to `initializer` for customization */
@@ -133,7 +139,7 @@ public class Entity extends ModelInstance implements Disposable {
 	public boolean isStatic() {
 		return rigidBody.getInvMass() == 0;
 	}
-	
+
 	public boolean isDestroyed() {
 		return dead;
 	}
@@ -214,7 +220,7 @@ public class Entity extends ModelInstance implements Disposable {
 			return position.equals(entity.position);
 		return false;
 	}
-	
+
 	private String getDebugName() {
 		return String.format("%s (%X, dimensions: %s)",
 				getClass().getSimpleName(), hashCode(), Utils.vectorString(dimensions));
