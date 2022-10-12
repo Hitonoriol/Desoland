@@ -1,8 +1,10 @@
 package hitonoriol.voxelsandbox.entity;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.bullet.collision.Collision;
 import com.badlogic.gdx.physics.bullet.collision.btCapsuleShape;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
 
@@ -11,23 +13,38 @@ import hitonoriol.voxelsandbox.assets.Models;
 import hitonoriol.voxelsandbox.assets.Prefs;
 import hitonoriol.voxelsandbox.input.GameInput;
 import hitonoriol.voxelsandbox.input.PlayerController;
+import hitonoriol.voxelsandbox.io.Out;
+import hitonoriol.voxelsandbox.world.World;
 import net.mgsx.gltf.scene3d.attributes.FogAttribute;
+import net.mgsx.gltf.scene3d.lights.DirectionalLightEx;
+import net.mgsx.gltf.scene3d.lights.PointLightEx;
 
 public class Player extends Creature {
 	private PerspectiveCamera camera = new PerspectiveCamera(Prefs.values().cameraFov,
 			Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	private PlayerController controller = new PlayerController(this);
 	private Vector3 tmpVec = new Vector3();
+	private PointLightEx light = new PointLightEx();
 
 	public Player() {
 		super(Models.player);
 		initBody(info -> {
-			info.setMass(1);
-			info.setLinearSleepingThreshold(0);
-			info.setAngularSleepingThreshold(0);
+			info.setMass(0.75f);
+			info.setFriction(0.95f);
 		}, Vector3.Zero);
-		setMovementSpeed(10);
+		setMovementSpeed(12);
+		var body = getBody();
+		body.setAngularFactor(Vector3.Y);
+		body.setActivationState(Collision.DISABLE_DEACTIVATION);
+		light.intensity = 25f;
+		light.range = 200f;
+		light.setColor(Color.RED);
 		VoxelSandbox.deferInit(this::initCamera);
+	}
+
+	@Override
+	public void init(World world) {
+		world.environment.add(light);
 	}
 
 	@Override
@@ -95,12 +112,20 @@ public class Player extends Creature {
 	@Override
 	protected void positionChanged() {
 		super.positionChanged();
+		light.position.set(getDirection()).scl(2f);
+		light.position.y = getHeight() * Prefs.values().firstPersonVerticalFactor;
+		light.position.add(getPosition());
 		updateCamera();
 	}
-	
+
+	@Override
+	public void destroy() {
+		GameInput.unregister(controller);
+		super.destroy();
+	}
+
 	@Override
 	public void dispose() {
-		GameInput.unregister(controller);
 		super.dispose();
 	}
 }

@@ -30,6 +30,8 @@ public class GameScreen extends ScreenAdapter {
 
 	@Override
 	public void resize(int width, int height) {
+		super.resize(width, height);
+		overlay.layout();
 		world.updateViewport(width, height);
 	}
 

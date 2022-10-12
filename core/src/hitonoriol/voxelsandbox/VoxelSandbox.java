@@ -9,6 +9,7 @@ import com.kotcrab.vis.ui.VisUI;
 
 import hitonoriol.voxelsandbox.assets.Assets;
 import hitonoriol.voxelsandbox.entity.Player;
+import hitonoriol.voxelsandbox.gui.Gui;
 import hitonoriol.voxelsandbox.input.GameInput;
 import hitonoriol.voxelsandbox.input.Keyboard;
 import hitonoriol.voxelsandbox.screens.GameScreen;
@@ -43,6 +44,12 @@ public class VoxelSandbox extends Game {
 		super.render();
 	}
 
+	@Override
+	public void resize(int width, int height) {
+		Gui.viewport().update(width, height, true);
+		super.resize(width, height);
+	}
+	
 	public static World world() {
 		return game.gameScreen.getWorld();
 	}

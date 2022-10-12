@@ -20,6 +20,7 @@ import hitonoriol.voxelsandbox.assets.Models;
 import hitonoriol.voxelsandbox.entity.physics.EntityMotionState;
 import hitonoriol.voxelsandbox.io.Out;
 import hitonoriol.voxelsandbox.util.Utils;
+import hitonoriol.voxelsandbox.world.World;
 
 public class Entity extends ModelInstance implements Disposable {
 	private Vector3 position = new Vector3();
@@ -43,14 +44,17 @@ public class Entity extends ModelInstance implements Disposable {
 		Out.print("%s: %s",
 				getDebugName(), bounds);
 	}
-	
+
 	public Entity(Mesh mesh) {
 		this(Models.build(mesh));
 	}
 
 	public Entity() {
-		this(Models.emptyModel());		
+		this(Models.emptyModel());
 	}
+
+	/* Called before adding this Entity to the world */
+	public void init(World world) {}
 
 	/* Construct a btRigidBodyConstructionInfo with some default values and pass it to `initializer` for customization */
 	public void initBody(Consumer<btRigidBodyConstructionInfo> initializer, Vector3 localInertia) {

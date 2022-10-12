@@ -33,8 +33,10 @@ public class PlayerController extends PollableInputAdapter {
 	private Vector3 rayFromPos = new Vector3();
 	private Vector3 rayToPos = new Vector3();
 
-	private final static Vector3 JUMP_IMPULSE = new Vector3(Vector3.Y).scl(25f);
+	private final static Vector3 JUMP_IMPULSE = new Vector3(Vector3.Y).scl(20f);
 	private final Vector3 groundDirection = new Vector3();
+
+	private boolean ghostMode = false;
 
 	private final static float SPRINT_FACTOR = 1.75f;
 	private boolean sprinting = false;
@@ -48,7 +50,7 @@ public class PlayerController extends PollableInputAdapter {
 		Gdx.graphics.setSystemCursor(SystemCursor.Crosshair);
 		Gdx.input.setCursorPosition(mouseX, mouseY);
 		Gdx.input.setCursorCatched(true);
-		groundDirection.y = -player.getHeight() * 0.9f;
+		groundDirection.y = -player.getHeight() * 0.5f;
 		Out.print("Ground direction vector: %s", groundDirection);
 		Out.print("Player center.y = %f, height = %f", player.getCenter().y, player.getHeight());
 	}
@@ -103,7 +105,7 @@ public class PlayerController extends PollableInputAdapter {
 			raycast(ray, object -> {
 				if (object instanceof btRigidBody obj) {
 					obj.activate();
-					obj.applyCentralImpulse(ray.direction.scl(50f));
+					obj.applyCentralImpulse(ray.direction.scl(350f));
 				}
 			});
 			break;
@@ -115,12 +117,13 @@ public class PlayerController extends PollableInputAdapter {
 			var startPoint = player.getPosition().cpy().add(ray.direction.cpy().scl(1.5f));
 			startPoint.y = player.getPosition().y + player.getHeight() * Prefs.values().firstPersonVerticalFactor;
 			Out.print("Start: %s", startPoint);
+
 			projBody.setIgnoreCollisionCheck(player().getBody(), true);
-			projBody.setRestitution(0.85f);
-			projectile.setMass(0.5f);
+			projBody.setRestitution(0.25f);
+			projectile.setMass(0.25f);
 			projectile.placeAt(startPoint);
 			projectile.syncBody();
-			projBody.applyCentralImpulse(ray.direction.cpy().scl(100f));
+			projBody.applyCentralImpulse(ray.direction.cpy().scl(30f));
 			world().addEntity(projectile);
 			break;
 		}
@@ -142,6 +145,12 @@ public class PlayerController extends PollableInputAdapter {
 						if (object.checkCollideWith(body))
 							body.applyCentralImpulse(JUMP_IMPULSE);
 					});
+			break;
+		}
+
+		case Keys.G: {
+			player().getBody().setGravity(ghostMode ? world().getGravity() : Vector3.Zero);
+			ghostMode ^= true;
 			break;
 		}
 
@@ -168,16 +177,27 @@ public class PlayerController extends PollableInputAdapter {
 		return false;
 	}
 
-	private static Vector3 UP = Vector3.Y.cpy().scl(50);
+	private static Vector3 UP = Vector3.Y.cpy().scl(0.75f);
 	private static Vector3 DOWN = UP.cpy().scl(-1);
 
 	@Override
 	public void pollKeys() {
+		if (ghostMode)
+			player.getBody().setLinearVelocity(Vector3.Zero);
+
 		Keyboard.getPressedKeys().forEach(this::processMovement);
 		if (Gdx.input.isKeyPressed(Keys.R))
-			player.getBody().applyCentralForce(UP);
+			impulseOrTranslate(UP);
 		else if (Gdx.input.isKeyPressed(Keys.F))
-			player.getBody().applyCentralForce(DOWN);
+			impulseOrTranslate(DOWN);
+	}
+
+	private void impulseOrTranslate(Vector3 moveBy) {
+		var body = player.getBody();
+		if (ghostMode)
+			body.translate(moveBy);
+		else
+			body.applyCentralImpulse(moveBy);
 	}
 
 	private void processMovement(int key) {

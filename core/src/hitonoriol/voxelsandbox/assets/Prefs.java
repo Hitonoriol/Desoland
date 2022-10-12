@@ -11,7 +11,7 @@ public class Prefs {
 	
 	public float cameraFov = 75f;
 	public float cameraSprintingFov = 95f;
-	public float cameraViewDistance = 250f;
+	public float cameraViewDistance = 350f;
 
 	private static final Prefs instance = new Prefs();
 

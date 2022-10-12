@@ -3,10 +3,6 @@ package hitonoriol.voxelsandbox.voxel;
 import static hitonoriol.voxelsandbox.VoxelSandbox.world;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import com.badlogic.gdx.graphics.g3d.Renderable;
@@ -16,19 +12,21 @@ import com.badlogic.gdx.utils.Pool;
 
 import hitonoriol.voxelsandbox.io.Out;
 import hitonoriol.voxelsandbox.random.Random;
+import hitonoriol.voxelsandbox.util.async.Async;
+import hitonoriol.voxelsandbox.world.World;
 
 public class Terrain implements RenderableProvider {
-	private final static int CHUNK_SIZE = 10, CHUNK_HEIGHT = 10;
+	private final static int CHUNK_SIZE = 10, CHUNK_HEIGHT = 20;
 	public final static float CHUNK_VISUAL_SIZE = CHUNK_SIZE * Chunk.HORIZONTAL_SCALE;
+	public final static float CHUNK_VISUAL_HEIGHT = CHUNK_HEIGHT * Chunk.VERTICAL_SCALE;
 
+	private World world;
 	private long seed = Random.nextLong();
 	private int size;
 	private Chunk chunks[];
 
-	private static final ExecutorService executor = Executors
-			.newFixedThreadPool((int) (Runtime.getRuntime().availableProcessors()));
-
-	public Terrain(int size) {
+	public Terrain(World world, int size) {
+		this.world = world;
 		this.size = size;
 		chunks = new Chunk[size * size];
 		for (int x = 0; x < size; ++x) {
@@ -41,6 +39,7 @@ public class Terrain implements RenderableProvider {
 	}
 
 	private void iterateChunkRect(int x, int z, int w, int h, Consumer<Chunk> action) {
+		Out.print("Chunk rectangle: %d, %x [%dx%d]", x, z, w, h);
 		int startX = x;
 		int maxX = x + w, maxZ = z + h;
 		for (; x < maxX; ++x) {
@@ -48,7 +47,10 @@ public class Terrain implements RenderableProvider {
 			if (h > 1)
 				action.accept(getChunk(x, z + h - 1));
 		}
+		if (h < 3)
+			return;
 		x = startX;
+		++z;
 		for (; z < maxZ; ++z) {
 			action.accept(getChunk(x, z));
 			if (w > 1)
@@ -58,17 +60,40 @@ public class Terrain implements RenderableProvider {
 
 	public void generate() {
 		Out.print("Generating world (%d chunks) with seed %d", chunks.length, seed);
-		var chunks = new AtomicInteger(0);
-		for (int diag = 0, i = size; diag <= size; i -= 2, ++diag) {
+		for (int diag = 0, i = size; diag <= size && i > 0; i -= 2, ++diag) {
 			final int fDiag = diag, fi = i;
 			CompletableFuture.runAsync(() -> {
-				Out.print("diag = %d", fDiag);
 				iterateChunkRect(fDiag, fDiag, fi, fi, chunk -> {
-					chunks.incrementAndGet();
 					chunk.generate(seed);
 				});
-			}, executor);
+			}, Async.executor())
+					.exceptionally(e -> {
+						e.printStackTrace();
+						return null;
+					});
 		}
+	}
+
+	public void updateChunk(Chunk chunk) {
+		chunk.beginUpdate();
+		CompletableFuture.runAsync(() -> {
+			chunk.updateMesh();
+		}, Async.executor())
+				.thenRun(() -> {
+					var dynWorld = world.getDynamicsWorld();
+					var body = chunk.getBody();
+					dynWorld.removeRigidBody(body);
+					dynWorld.addRigidBody(body);
+				})
+				.exceptionally(e -> {
+					Out.print("Exception on chunk update [%s]", chunk);
+					e.printStackTrace();
+					return null;
+				});
+	}
+
+	public void updateChunk(int x, int z) {
+		updateChunk(getChunk(x, z));
 	}
 
 	public void forEachChunk(Consumer<Chunk> action) {
@@ -100,6 +125,9 @@ public class Terrain implements RenderableProvider {
 	public void getRenderables(Array<Renderable> renderables, Pool<Renderable> pool) {
 		for (int i = 0; i < chunks.length; ++i) {
 			var chunk = chunks[i];
+			if (chunk.needsUpdate())
+				updateChunk(chunk);
+
 			if (!chunk.isReady())
 				continue;
 

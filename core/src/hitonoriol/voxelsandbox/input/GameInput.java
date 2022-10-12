@@ -9,7 +9,7 @@ import com.badlogic.gdx.InputProcessor;
 
 public class GameInput extends InputMultiplexer {
 	private final static GameInput instance = new GameInput();
-	
+
 	private List<PollableInput> pollables = new ArrayList<PollableInput>();
 
 	private GameInput() {
@@ -28,7 +28,12 @@ public class GameInput extends InputMultiplexer {
 	public static void unregister(InputProcessor processor) {
 		instance.removeProcessor(processor);
 	}
-	
+
+	public static void unregister(PollableInputAdapter pollable) {
+		unregister((InputProcessor) pollable);
+		instance.pollables.remove(pollable);
+	}
+
 	public static void poll() {
 		instance.pollables.forEach(PollableInput::pollKeys);
 	}
